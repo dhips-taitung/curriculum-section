@@ -44,16 +44,8 @@
     h2 { margin: 0; color: var(--primary); font-size: 22px; }
     .hidden { display: none !important; }
 
-    .login-box {
-      text-align: center;
-      padding: 40px 20px;
-    }
-    .notice-card {
-      border-radius: 8px;
-      padding: 20px;
-      margin-top: 15px;
-      text-align: center;
-    }
+    .login-box { text-align: center; padding: 40px 20px; }
+    .notice-card { border-radius: 8px; padding: 20px; margin-top: 15px; text-align: center; }
     .card-danger { border: 1px solid #fecaca; background-color: #fef2f2; color: #991b1b; }
     .card-pending { border: 1px solid #bfdbfe; background-color: #eff6ff; color: #1e40af; }
     .card-apply { border: 1px solid #fed7aa; background-color: #fffbeb; text-align: left; }
@@ -61,11 +53,11 @@
     .auth-badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       background-color: #e8f5e9;
       color: var(--success);
       border: 1px solid #c8e6c9;
-      padding: 4px 12px;
+      padding: 6px 14px;
       border-radius: 20px;
       font-size: 13px;
       margin-bottom: 16px;
@@ -88,7 +80,6 @@
     select:focus, input:focus { border-color: var(--primary); }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-    /* 個別學生填報表格 */
     .record-table {
       width: 100%;
       border-collapse: collapse;
@@ -134,11 +125,7 @@
     }
     .btn-primary { background: var(--primary); color: #fff; }
     .btn-primary:hover { background: var(--primary-hover); }
-    .btn-outline {
-      background: #fff;
-      color: var(--primary);
-      border: 1px dashed var(--primary);
-    }
+    .btn-outline { background: #fff; color: var(--primary); border: 1px dashed var(--primary); }
     .btn-outline:hover { background: #f0f7ff; }
     .btn-warning { background: var(--warning); color: #fff; }
     .btn-danger { background: var(--danger); color: #fff; }
@@ -168,7 +155,7 @@
 
   <!-- 1. Google 登入按鈕 -->
   <div id="loginView" class="login-box">
-    <p>請使用學校 Google 帳號登入系統：</p>
+    <p>本系統僅供學校教職員登入填報，請使用學校 Google 帳號登入：</p>
     <div style="display: flex; justify-content: center;">
       <div id="g_id_onload"
            data-client_id="341910377782-3unva3oggi84vp88uga23horpumjaptt.apps.googleusercontent.com"
@@ -186,7 +173,7 @@
     </div>
   </div>
 
-  <!-- 2. 身分審核攔截容器 -->
+  <!-- 2. 身分狀態容器 -->
   <div id="statusContainer" class="hidden">
     <div id="studentBlockedCard" class="notice-card card-danger hidden">
       <h3 style="margin-top:0;">🚫 存取受限：偵測到學生身分帳號</h3>
@@ -196,33 +183,53 @@
 
     <div id="pendingCard" class="notice-card card-pending hidden">
       <h3 style="margin-top:0;">⌛ 權限審核中</h3>
-      <p>您的教職員申請已送出，管理者正在審核中。</p>
+      <p>您的教職員使用申請已送出，目前正等待管理者核准中。</p>
       <p style="font-size:13px; color:#475569;">管理者於「申請帳號資料」表核准並產生通行碼後即可填報。</p>
     </div>
 
+    <!-- 首次使用：需選擇自己專屬的班級 -->
     <div id="applyCard" class="notice-card card-apply hidden">
-      <h3 style="margin-top:0; color:#b45309;">📋 教職員使用權限申請</h3>
+      <h3 style="margin-top:0; color:#b45309;">📋 教職員帳號班級綁定申請</h3>
       <p style="font-size:14px; color:#666; margin-bottom:14px;">帳號 (<strong><span id="applyEmailSpan"></span></strong>) 尚未取得授權：</p>
+      
       <div class="form-group">
         <label for="applyTeacherName">教師姓名：</label>
         <input type="text" id="applyTeacherName" placeholder="例如：林大明 老師" />
       </div>
+
+      <div class="form-group">
+        <label for="applyTargetClass">請選擇您任教/欲綁定的班級 (每位老師限綁定一班)：</label>
+        <select id="applyTargetClass">
+          <option value="">-- 請選擇班級 --</option>
+          <option value="101">101 班</option><option value="102">102 班</option><option value="103">103 班</option><option value="104">104 班</option>
+          <option value="201">201 班</option><option value="202">202 班</option><option value="203">203 班</option><option value="204">204 班</option>
+          <option value="301">301 班</option><option value="302">302 班</option><option value="303">303 班</option><option value="304">304 班</option>
+          <option value="401">401 班</option><option value="402">402 班</option><option value="403">403 班</option><option value="404">404 班</option>
+          <option value="501">501 班</option><option value="502">502 班</option><option value="503">503 班</option><option value="504">504 班</option>
+          <option value="601">601 班</option><option value="602">602 班</option><option value="603">603 班</option><option value="604">604 班</option>
+        </select>
+      </div>
+
       <div class="form-group">
         <label for="applyInviteCode">教職員申請代碼 (防學生誤填)：</label>
         <input type="password" id="applyInviteCode" placeholder="請輸入通行代碼 (預設 DHIPS-TEACHER)" />
       </div>
+
       <div class="form-group">
-        <label for="applyReason">身分 / 備註：</label>
-        <input type="text" id="applyReason" placeholder="例如：101導師、科任教師" />
+        <label for="applyReason">身分備註 (選填)：</label>
+        <input type="text" id="applyReason" placeholder="例如：該班導師" />
       </div>
-      <button class="btn btn-warning" id="applySubmitBtn" style="width:100%;" onclick="sendTeacherApplication()">送出申請</button>
+
+      <button class="btn btn-warning" id="applySubmitBtn" style="width:100%;" onclick="sendTeacherApplication()">送出綁定申請</button>
     </div>
   </div>
 
   <!-- 3. 已授權主填報區 -->
   <div id="mainSystem" class="hidden">
     <div class="auth-badge">
-      <span>✔ 授權已通過</span>
+      <span>✔ 授權已核准</span>
+      <span style="color:#666;">| 專屬填報班級:</span>
+      <strong id="assignedClassBadge" style="color:#1e40af; font-size:14px;"></strong>
       <span style="color:#666;">| 通行碼:</span>
       <code id="userUuidSpan" style="font-weight:bold;"></code>
     </div>
@@ -230,19 +237,19 @@
     <!-- 步驟一與二：選擇班級與填報項目 -->
     <div class="grid-2">
       <div class="form-group">
-        <label for="classSelect">步驟一：請選擇班級</label>
+        <label for="classSelect">填報班級 (已綁定鎖定)</label>
         <select id="classSelect" onchange="onClassSelected()">
-          <option value="">-- 請選擇班級 --</option>
+          <option value="">-- 載入中 --</option>
         </select>
       </div>
 
       <div class="form-group">
         <label for="itemSelect">
-          步驟二：請選擇填報項目
+          填報項目
           <span id="itemLimitTag" class="limit-tag hidden"></span>
         </label>
         <select id="itemSelect" onchange="onItemSelected()" disabled>
-          <option value="">-- 請先選擇班級 --</option>
+          <option value="">-- 請先確認班級 --</option>
         </select>
       </div>
     </div>
@@ -250,7 +257,7 @@
     <!-- 步驟三：個別指派學生與成績表現表 -->
     <div id="recordSection" class="hidden" style="margin-top: 15px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-        <label style="font-size:15px;">步驟三：指派獲獎學生名單與個別成績表現 (排名)</label>
+        <label style="font-size:15px;">指派獲獎學生與個別成績表現 (排名)</label>
         <button type="button" class="btn btn-outline" onclick="addStudentRow()">+ 新增一位獲獎學生</button>
       </div>
 
@@ -264,9 +271,7 @@
             <th style="width: 8%; text-align:center;">刪除</th>
           </tr>
         </thead>
-        <tbody id="recordTbody">
-          <!-- 動態新增列 -->
-        </tbody>
+        <tbody id="recordTbody"></tbody>
       </table>
 
       <div style="text-align: right; margin-top: 24px;">
@@ -280,9 +285,8 @@
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyfiNLmE_kg8Lc4v0OLimkdQ5gmu54ym3CXDnuUY4jtH9EgkxJt7Z54-STlhcF7YxIUDQ/exec"; // 請填入獨立後端部署網址
 
   let currentUser = { email: "", name: "" };
-  let currentClassData = null; // 包含 items, scoreOptions, students
+  let currentClassData = null;
 
-  // 1. Google 登入
   function handleCredentialResponse(response) {
     const payload = decodeJwtResponse(response.credential);
     currentUser.email = payload.email.toLowerCase();
@@ -292,7 +296,6 @@
     document.getElementById("userInfo").classList.remove("hidden");
     document.getElementById("userEmailSpan").textContent = `${currentUser.name} (${currentUser.email})`;
 
-    // 學生帳號攔截 (學號開頭)
     if (/^([0-9]|s[0-9]|stu[0-9])/i.test(currentUser.email.split("@")[0])) {
       document.getElementById("statusContainer").classList.remove("hidden");
       document.getElementById("studentBlockedCard").classList.remove("hidden");
@@ -314,7 +317,6 @@
     location.reload();
   }
 
-  // 2. 身分驗證
   async function verifyGlobalAuth() {
     try {
       const res = await fetch(`${GAS_WEB_APP_URL}?action=checkGlobalAuth&email=${encodeURIComponent(currentUser.email)}`);
@@ -328,7 +330,9 @@
         statusContainer.classList.add("hidden");
         document.getElementById("mainSystem").classList.remove("hidden");
         document.getElementById("userUuidSpan").textContent = auth.uuid;
-        loadClassList();
+        document.getElementById("assignedClassBadge").textContent = auth.role === "ADMIN" ? "全校班級 (管理者)" : `${auth.assignedClass} 班`;
+        
+        loadAssignedClasses(auth);
       } else {
         statusContainer.classList.remove("hidden");
         if (auth.status === "PENDING") {
@@ -346,11 +350,13 @@
 
   async function sendTeacherApplication() {
     const teacherName = document.getElementById("applyTeacherName").value.trim();
+    const targetClass = document.getElementById("applyTargetClass").value;
     const inviteCode = document.getElementById("applyInviteCode").value.trim();
     const reason = document.getElementById("applyReason").value.trim();
     const btn = document.getElementById("applySubmitBtn");
 
-    if (!teacherName) return alert("請輸入姓名！");
+    if (!teacherName) return alert("請輸入教師姓名！");
+    if (!targetClass) return alert("請選擇您要綁定的班級！");
     if (!inviteCode) return alert("請輸入教職員代碼！");
 
     btn.disabled = true;
@@ -363,6 +369,7 @@
           action: "applyPermission",
           userEmail: currentUser.email,
           userName: teacherName,
+          targetClass: targetClass,
           inviteCode: inviteCode,
           reason: reason
         })
@@ -379,31 +386,42 @@
       alert("申請送出異常！");
     } finally {
       btn.disabled = false;
-      btn.textContent = "送出申請";
+      btn.textContent = "送出綁定申請";
     }
   }
 
-  // 3. 載入班級清單
-  async function loadClassList() {
+  // 載入班級選單：一般老師直接鎖定專屬班級
+  async function loadAssignedClasses(auth) {
     try {
       const res = await fetch(`${GAS_WEB_APP_URL}?action=getClasses&email=${encodeURIComponent(currentUser.email)}`);
       const json = await res.json();
       if (json.status === "success") {
         const sel = document.getElementById("classSelect");
-        sel.innerHTML = '<option value="">-- 請選擇班級 --</option>';
+        sel.innerHTML = "";
+
         json.data.forEach(cls => {
           const opt = document.createElement("option");
           opt.value = cls;
           opt.textContent = `${cls} 班`;
           sel.appendChild(opt);
         });
+
+        // 如果是一般老師，自動選擇該班並鎖定下拉選單，防止切換
+        if (json.role === "TEACHER") {
+          sel.value = auth.assignedClass;
+          sel.disabled = true; // 鎖定不可改
+          onClassSelected();   // 自動載入該班資料
+        } else {
+          // 管理者保留切換功能
+          sel.disabled = false;
+          onClassSelected();
+        }
       }
     } catch (e) {
       alert("載入班級失敗！");
     }
   }
 
-  // 4. 選擇班級：載入設定表中的項目、成績表現與學生
   async function onClassSelected() {
     const classId = document.getElementById("classSelect").value;
     const itemSelect = document.getElementById("itemSelect");
@@ -428,7 +446,6 @@
         return;
       }
 
-      // 渲染填報項目選單 (A欄)
       itemSelect.innerHTML = '<option value="">-- 請選擇填報項目 --</option>';
       currentClassData.items.forEach(it => {
         const opt = document.createElement("option");
@@ -444,7 +461,6 @@
     }
   }
 
-  // 5. 選擇項目：顯示名額上限並初始化第一列
   function onItemSelected() {
     const itemSelect = document.getElementById("itemSelect");
     const selectedOpt = itemSelect.options[itemSelect.selectedIndex];
@@ -461,21 +477,17 @@
     limitTag.textContent = `本項目上限：最多 ${limit} 位學生`;
     limitTag.classList.remove("hidden");
 
-    // 清空現有表格並預設產生第一列
     document.getElementById("recordTbody").innerHTML = "";
     addStudentRow();
-
     recordSection.classList.remove("hidden");
   }
 
-  // 6. 動態新增一列獲獎學生
   function addStudentRow() {
     const tbody = document.getElementById("recordTbody");
     const rowIndex = tbody.rows.length + 1;
-
-    // 檢查是否已達項目上限
     const itemSelect = document.getElementById("itemSelect");
     const maxLimit = Number(itemSelect.options[itemSelect.selectedIndex].dataset.limit) || 99;
+
     if (tbody.rows.length >= maxLimit) {
       alert(`已達到本項目名額上限 (${maxLimit} 人)，無法再新增！`);
       return;
@@ -483,13 +495,11 @@
 
     const tr = document.createElement("tr");
 
-    // 建立學生下拉選單
     let studentOptionsHtml = '<option value="">-- 請選擇學生 --</option>';
     currentClassData.students.forEach(st => {
       studentOptionsHtml += `<option value="${st.id}" data-name="${st.name}">${st.id} ${st.name}</option>`;
     });
 
-    // 建立成績表現下拉選單 (自「設定」表 B 欄抓取)
     let scoreOptionsHtml = '<option value="">-- 選擇成績表現 --</option>';
     currentClassData.scoreOptions.forEach(sc => {
       scoreOptionsHtml += `<option value="${sc}">${sc}</option>`;
@@ -497,18 +507,10 @@
 
     tr.innerHTML = `
       <td style="font-weight:bold; color:#64748b; text-align:center;" class="row-num">${rowIndex}</td>
-      <td>
-        <select class="row-student" required>${studentOptionsHtml}</select>
-      </td>
-      <td>
-        <select class="row-score" required>${scoreOptionsHtml}</select>
-      </td>
-      <td>
-        <input type="text" class="row-note" placeholder="例如：進步獎 (選填)" />
-      </td>
-      <td style="text-align:center;">
-        <button type="button" class="btn-del" onclick="removeRow(this)">刪除</button>
-      </td>
+      <td><select class="row-student" required>${studentOptionsHtml}</select></td>
+      <td><select class="row-score" required>${scoreOptionsHtml}</select></td>
+      <td><input type="text" class="row-note" placeholder="例如：進步獎 (選填)" /></td>
+      <td style="text-align:center;"><button type="button" class="btn-del" onclick="removeRow(this)">刪除</button></td>
     `;
 
     tbody.appendChild(tr);
@@ -517,22 +519,17 @@
 
   function removeRow(btn) {
     const tbody = document.getElementById("recordTbody");
-    if (tbody.rows.length <= 1) {
-      alert("至少需保留一位學生！");
-      return;
-    }
+    if (tbody.rows.length <= 1) return alert("至少需保留一位學生！");
     btn.closest("tr").remove();
     updateRowNumbers();
   }
 
   function updateRowNumbers() {
-    const rows = document.querySelectorAll("#recordTbody tr");
-    rows.forEach((r, idx) => {
+    document.querySelectorAll("#recordTbody tr").forEach((r, idx) => {
       r.querySelector(".row-num").textContent = idx + 1;
     });
   }
 
-  // 7. 檢查與提交整份填報名單
   async function submitAllRecords() {
     const classId = document.getElementById("classSelect").value;
     const itemName = document.getElementById("itemSelect").value;
@@ -564,25 +561,16 @@
         scoreSel.focus();
         return;
       }
-
-      // 防重複學生檢查
       if (studentIdSet.has(studentId)) {
-        alert(`學生【${studentName}】在清單中被重複選取，請檢查！`);
+        alert(`學生【${studentName}】在清單中被重複選取！`);
         return;
       }
       studentIdSet.add(studentId);
 
-      records.push({
-        id: studentId,
-        name: studentName,
-        score: score,
-        note: note
-      });
+      records.push({ id: studentId, name: studentName, score: score, note: note });
     }
 
-    if (!confirm(`即將送出【${itemName}】共 ${records.length} 筆學生評報至 ${classId} 班？`)) {
-      return;
-    }
+    if (!confirm(`即將送出【${itemName}】共 ${records.length} 筆學生評報至 ${classId} 班？`)) return;
 
     const submitBtn = document.getElementById("submitBtn");
     submitBtn.disabled = true;
@@ -602,8 +590,7 @@
       const json = await res.json();
 
       if (json.status === "success") {
-        alert(`填報成功！已寫入 ${json.count} 位學生成績至該班試算表。`);
-        // 重設填報區
+        alert(`填報成功！已寫入 ${json.count} 位學生成績至 ${classId} 班試算表。`);
         document.getElementById("itemSelect").value = "";
         document.getElementById("recordSection").classList.add("hidden");
         document.getElementById("itemLimitTag").classList.add("hidden");
