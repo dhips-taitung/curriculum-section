@@ -55,25 +55,28 @@
       font-size: 15px;
     }
 
-    /* 權限狀態卡片 */
-    .permission-card {
+    .notice-card {
       border-radius: 8px;
-      padding: 20px;
-      margin-top: 20px;
+      padding: 24px;
+      margin-top: 15px;
       text-align: center;
     }
-    .card-warn {
-      border: 1px solid #fed7aa;
-      background-color: #fffbeb;
-      color: #b45309;
+    .card-danger {
+      border: 1px solid #fecaca;
+      background-color: #fef2f2;
+      color: #991b1b;
     }
     .card-pending {
       border: 1px solid #bfdbfe;
       background-color: #eff6ff;
       color: #1e40af;
     }
+    .card-apply {
+      border: 1px solid #fed7aa;
+      background-color: #fffbeb;
+      text-align: left;
+    }
     
-    /* 授權通過徽章 */
     .auth-badge {
       display: inline-flex;
       align-items: center;
@@ -94,7 +97,7 @@
       gap: 6px;
     }
     label { font-weight: 600; font-size: 14px; }
-    select, input[type="text"], input[type="number"] {
+    select, input[type="text"], input[type="number"], input[type="password"] {
       padding: 10px 12px;
       border: 1px solid var(--border);
       border-radius: 6px;
@@ -157,9 +160,9 @@
     </div>
   </div>
 
-  <!-- 1. 登入畫面 -->
+  <!-- 1. Google 登入按鈕 -->
   <div id="loginView" class="login-box">
-    <p>請使用學校 Google 帳號登入系統：</p>
+    <p>本系統僅供學校教職員登入填報，請使用學校 Google 帳號登入：</p>
     <div style="display: flex; justify-content: center;">
       <div id="g_id_onload"
            data-client_id="341910377782-3unva3oggi84vp88uga23horpumjaptt.apps.googleusercontent.com"
@@ -177,40 +180,65 @@
     </div>
   </div>
 
-  <!-- 2. 作業主畫面 -->
-  <div id="appView" class="hidden">
-    <!-- 選擇班級 -->
+  <!-- 2. 身分狀態展示 (全域閘門) -->
+  <div id="statusContainer" class="hidden">
+    <!-- 學生帳號直接攔截警告 -->
+    <div id="studentBlockedCard" class="notice-card card-danger hidden">
+      <h3 style="margin-top:0;">🚫 存取受限：偵測到學生身分帳號</h3>
+      <p>本系統僅限本校教職員登入，學生帳號無權存取與申請。</p>
+      <button class="btn btn-danger" onclick="logout()">切換其他帳號</button>
+    </div>
+
+    <!-- 待審核中提示 -->
+    <div id="pendingCard" class="notice-card card-pending hidden">
+      <h3 style="margin-top:0;">⌛ 權限審核中</h3>
+      <p>老師您好，您的教職員使用申請已送交管理者 (<code>chienmu.tai@dhips.ttct.edu.tw</code>)。</p>
+      <p style="font-size:13px; color:#475569;">管理者於系統核准並產生專屬通行碼 (UUID) 後，重新整理本頁即可直接登入填報。</p>
+    </div>
+
+    <!-- 首次使用：教師申請表單 -->
+    <div id="applyCard" class="notice-card card-apply hidden">
+      <h3 style="margin-top:0; color:#b45309;">📋 教職員使用權限申請</h3>
+      <p style="font-size:14px; color:#666; margin-bottom:16px;">
+        帳號 (<strong><span id="applyEmailSpan"></span></strong>) 尚未取得授權，請填寫申請資訊以供管理者審核：
+      </p>
+
+      <div class="form-group">
+        <label for="applyTeacherName">教師姓名：</label>
+        <input type="text" id="applyTeacherName" placeholder="例如：林大明 老師" />
+      </div>
+
+      <div class="form-group">
+        <label for="applyInviteCode">校內教職員申請代碼 (防學生誤填)：</label>
+        <input type="password" id="applyInviteCode" placeholder="請輸入校內通行代碼 (如 DHIPS-TEACHER)" />
+      </div>
+
+      <div class="form-group">
+        <label for="applyReason">身分 / 備註：</label>
+        <input type="text" id="applyReason" placeholder="例如：101班導師、自然科任等" />
+      </div>
+
+      <button class="btn btn-warning" id="applySubmitBtn" style="width:100%;" onclick="sendTeacherApplication()">送出教職員使用申請</button>
+    </div>
+  </div>
+
+  <!-- 3. 已核准老師：填報主系統 (未核准前此區完全隔離) -->
+  <div id="mainSystem" class="hidden">
+    <!-- 授權徽章 -->
+    <div class="auth-badge">
+      <span>✔ 教師授權已通過</span>
+      <span style="color:#666;">| 通行 UUID:</span>
+      <code id="userUuidSpan" style="font-weight:bold;"></code>
+    </div>
+
     <div class="form-group">
       <label for="classSelect">步驟一：請選擇填報班級</label>
-      <select id="classSelect" onchange="onClassChange()">
+      <select id="classSelect" onchange="onClassSelected()">
         <option value="">-- 請選擇班級 --</option>
       </select>
     </div>
 
-    <!-- 狀態 A：待審核 -->
-    <div id="pendingCard" class="permission-card card-pending hidden">
-      <h3 style="margin-top:0;">⌛ 權限審核中</h3>
-      <p>您的帳號已提交 <strong><span class="selectedClassText"></span></strong> 的填報申請，目前正等待管理者核准中。</p>
-      <p style="font-size:13px; color:#475569;">管理者於「申請帳號資料」表核准並生成 UUID 後，重新整理本頁即可開始填報。</p>
-    </div>
-
-    <!-- 狀態 B：未申請/未授權 -->
-    <div id="unauthorizedCard" class="permission-card card-warn hidden">
-      <h3 style="margin-top:0;">⚠ 尚未獲得填報授權</h3>
-      <p>帳號 (<strong><span id="applyEmailSpan"></span></strong>) 尚未被核准填報 <strong><span class="selectedClassText"></span></strong>。</p>
-      <p style="font-size:13px;">點擊下方按鈕將會寄送申請通知信至 <code>chienmu@dhips.ttct.edu.tw</code>：</p>
-      <button class="btn btn-warning" id="applyBtn" onclick="sendPermissionRequest()">向管理者申請使用權限</button>
-    </div>
-
-    <!-- 狀態 C：已授權，進入填報表單 -->
-    <div id="reportingForm" class="hidden" style="margin-top: 15px;">
-      <!-- 顯示核准徽章與 UUID -->
-      <div class="auth-badge">
-        <span>✔ 授權已核准</span>
-        <span style="color:#666;">| 通行碼:</span>
-        <code id="userUuidSpan" style="font-weight:bold;"></code>
-      </div>
-
+    <div id="reportingFields" class="hidden" style="margin-top: 15px;">
       <div class="grid-2">
         <div class="form-group">
           <label for="itemSelect">步驟二：填報項目</label>
@@ -224,10 +252,10 @@
 
       <div class="form-group">
         <label for="noteInput">備註說明 (選填)</label>
-        <input type="text" id="noteInput" placeholder="例如：期中評量進步獎" />
+        <input type="text" id="noteInput" placeholder="例如：期中表現優異" />
       </div>
 
-      <!-- 學生勾選清單 -->
+      <!-- 學生勾選名單 -->
       <div class="form-group">
         <div class="student-panel">
           <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -239,7 +267,7 @@
       </div>
 
       <div style="text-align: right; margin-top: 20px;">
-        <button class="btn btn-primary" id="submitBtn" onclick="submitData()">確認送出並寫入試算表</button>
+        <button class="btn btn-primary" id="submitBtn" onclick="submitScores()">確認送出並寫入試算表</button>
       </div>
     </div>
   </div>
@@ -252,17 +280,25 @@
   let currentUser = { email: "", name: "" };
   let isAllSelected = false;
 
+  // 1. Google 登入處理
   function handleCredentialResponse(response) {
     const payload = decodeJwtResponse(response.credential);
-    currentUser.email = payload.email;
+    currentUser.email = payload.email.toLowerCase();
     currentUser.name = payload.name || payload.email.split("@")[0];
 
     document.getElementById("loginView").classList.add("hidden");
     document.getElementById("userInfo").classList.remove("hidden");
     document.getElementById("userEmailSpan").textContent = `${currentUser.name} (${currentUser.email})`;
-    document.getElementById("appView").classList.remove("hidden");
 
-    loadClasses();
+    // 前端第一層防護：檢查是否符合學號特徵 (數字開頭或 s/stu 接數字)
+    if (/^([0-9]|s[0-9]|stu[0-9])/i.test(currentUser.email.split("@")[0])) {
+      document.getElementById("statusContainer").classList.remove("hidden");
+      document.getElementById("studentBlockedCard").classList.remove("hidden");
+      return;
+    }
+
+    // 向後端執行全域身分查驗
+    verifyGlobalAuth();
   }
 
   function decodeJwtResponse(token) {
@@ -277,9 +313,87 @@
     location.reload();
   }
 
-  async function loadClasses() {
+  // 2. 向後端確認身分狀態
+  async function verifyGlobalAuth() {
     try {
-      const res = await fetch(`${GAS_WEB_APP_URL}?action=getClasses`);
+      const res = await fetch(`${GAS_WEB_APP_URL}?action=checkGlobalAuth&email=${encodeURIComponent(currentUser.email)}`);
+      const json = await res.json();
+
+      if (json.status !== "success") {
+        alert(json.message);
+        return;
+      }
+
+      const auth = json.auth;
+      const statusContainer = document.getElementById("statusContainer");
+
+      if (auth.isAuthorized) {
+        // 已通過核准：解鎖主填報介面
+        statusContainer.classList.add("hidden");
+        document.getElementById("mainSystem").classList.remove("hidden");
+        document.getElementById("userUuidSpan").textContent = auth.uuid;
+        loadClassList();
+      } else {
+        // 未通過核准
+        statusContainer.classList.remove("hidden");
+        if (auth.status === "PENDING") {
+          document.getElementById("pendingCard").classList.remove("hidden");
+        } else {
+          // 未申請過：顯示申請卡片
+          document.getElementById("applyEmailSpan").textContent = currentUser.email;
+          document.getElementById("applyTeacherName").value = currentUser.name;
+          document.getElementById("applyCard").classList.remove("hidden");
+        }
+      }
+    } catch (e) {
+      alert("身分連線查驗失敗，請稍後再試！");
+    }
+  }
+
+  // 3. 送出教職員申請
+  async function sendTeacherApplication() {
+    const teacherName = document.getElementById("applyTeacherName").value.trim();
+    const inviteCode = document.getElementById("applyInviteCode").value.trim();
+    const reason = document.getElementById("applyReason").value.trim();
+    const btn = document.getElementById("applySubmitBtn");
+
+    if (!teacherName) return alert("請填寫您的教師姓名！");
+    if (!inviteCode) return alert("請輸入校內教職員申請代碼！");
+
+    btn.disabled = true;
+    btn.textContent = "傳送申請中...";
+
+    try {
+      const res = await fetch(GAS_WEB_APP_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "applyPermission",
+          userEmail: currentUser.email,
+          userName: teacherName,
+          inviteCode: inviteCode,
+          reason: reason
+        })
+      });
+      const json = await res.json();
+      if (json.status === "success") {
+        alert(json.message);
+        document.getElementById("applyCard").classList.add("hidden");
+        document.getElementById("pendingCard").classList.remove("hidden");
+      } else {
+        alert(`申請失敗：${json.message}`);
+      }
+    } catch (e) {
+      alert("申請送出發生異常，請重試！");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "送出教職員使用申請";
+    }
+  }
+
+  // 4. 載入班級選單 (僅限已核准身分)
+  async function loadClassList() {
+    try {
+      const res = await fetch(`${GAS_WEB_APP_URL}?action=getClasses&email=${encodeURIComponent(currentUser.email)}`);
       const json = await res.json();
       if (json.status === "success") {
         const sel = document.getElementById("classSelect");
@@ -292,71 +406,19 @@
         });
       }
     } catch (e) {
-      alert("載入班級清單失敗！");
+      alert("載入班級失敗！");
     }
   }
 
-  async function onClassChange() {
+  // 5. 選擇班級後讀取學生與項目
+  async function onClassSelected() {
     const classId = document.getElementById("classSelect").value;
-    hideAllPanels();
-    if (!classId) return;
-
-    document.querySelectorAll(".selectedClassText").forEach(el => el.textContent = `${classId} 班`);
-    document.getElementById("applyEmailSpan").textContent = currentUser.email;
-
-    try {
-      const res = await fetch(`${GAS_WEB_APP_URL}?action=checkPermission&email=${encodeURIComponent(currentUser.email)}&classId=${classId}`);
-      const json = await res.json();
-
-      if (json.authStatus === "APPROVED") {
-        // 顯示 UUID 並載入表單
-        document.getElementById("userUuidSpan").textContent = json.uuid;
-        loadClassFormData(classId);
-      } else if (json.authStatus === "PENDING") {
-        document.getElementById("pendingCard").classList.remove("hidden");
-      } else {
-        document.getElementById("unauthorizedCard").classList.remove("hidden");
-      }
-    } catch (e) {
-      alert("檢查權限失敗！");
+    const formPanel = document.getElementById("reportingFields");
+    if (!classId) {
+      formPanel.classList.add("hidden");
+      return;
     }
-  }
 
-  function hideAllPanels() {
-    document.getElementById("pendingCard").classList.add("hidden");
-    document.getElementById("unauthorizedCard").classList.add("hidden");
-    document.getElementById("reportingForm").classList.add("hidden");
-  }
-
-  async function sendPermissionRequest() {
-    const classId = document.getElementById("classSelect").value;
-    const btn = document.getElementById("applyBtn");
-
-    btn.disabled = true;
-    btn.textContent = "傳送申請中...";
-
-    try {
-      const res = await fetch(GAS_WEB_APP_URL, {
-        method: "POST",
-        body: JSON.stringify({
-          action: "applyPermission",
-          userEmail: currentUser.email,
-          userName: currentUser.name,
-          classId: classId
-        })
-      });
-      const json = await res.json();
-      alert(json.message);
-      onClassChange();
-    } catch (e) {
-      alert("申請送出失敗，請稍後再試！");
-    } finally {
-      btn.disabled = false;
-      btn.textContent = "向管理者申請使用權限";
-    }
-  }
-
-  async function loadClassFormData(classId) {
     try {
       const res = await fetch(`${GAS_WEB_APP_URL}?action=getClassData&classId=${classId}&email=${encodeURIComponent(currentUser.email)}`);
       const json = await res.json();
@@ -367,10 +429,12 @@
 
       const { status, items, students } = json.data;
       if (status === "暫停填報") {
-        alert("⚠ 該班級目前設定為「暫停填報」，系統已鎖定！");
+        alert("⚠ 該班級目前為「暫停填報」狀態！");
+        formPanel.classList.add("hidden");
         return;
       }
 
+      // 渲染填報項目
       const itemSelect = document.getElementById("itemSelect");
       itemSelect.innerHTML = '<option value="">-- 請選擇項目 --</option>';
       items.forEach(it => {
@@ -380,6 +444,7 @@
         itemSelect.appendChild(opt);
       });
 
+      // 渲染學生名單
       const grid = document.getElementById("studentGrid");
       grid.innerHTML = "";
       students.forEach(st => {
@@ -392,7 +457,7 @@
         grid.appendChild(lbl);
       });
 
-      document.getElementById("reportingForm").classList.remove("hidden");
+      formPanel.classList.remove("hidden");
     } catch (e) {
       alert("載入資料失敗！");
     }
@@ -403,7 +468,8 @@
     document.querySelectorAll(".student-cb").forEach(cb => cb.checked = isAllSelected);
   }
 
-  async function submitData() {
+  // 6. 送出成績
+  async function submitScores() {
     const classId = document.getElementById("classSelect").value;
     const item = document.getElementById("itemSelect").value;
     const score = document.getElementById("scoreInput").value.trim();
@@ -412,10 +478,10 @@
     if (!item) return alert("請選擇填報項目！");
     if (!score) return alert("請輸入成績表現！");
 
-    const checkedBoxes = Array.from(document.querySelectorAll(".student-cb:checked"));
-    if (checkedBoxes.length === 0) return alert("請至少勾選一名學生！");
+    const checked = Array.from(document.querySelectorAll(".student-cb:checked"));
+    if (checked.length === 0) return alert("請至少勾選一名學生！");
 
-    const records = checkedBoxes.map(cb => ({
+    const records = checked.map(cb => ({
       id: cb.value,
       name: cb.dataset.name,
       item: item,
@@ -423,7 +489,7 @@
       note: note
     }));
 
-    if (!confirm(`即將送出 ${records.length} 筆資料至 ${classId} 班，填報人：${currentUser.email}？`)) return;
+    if (!confirm(`確認送出 ${records.length} 筆資料至 ${classId} 班？`)) return;
 
     const btn = document.getElementById("submitBtn");
     btn.disabled = true;
@@ -441,7 +507,7 @@
       });
       const json = await res.json();
       if (json.status === "success") {
-        alert(`填報成功！已寫入 ${json.count} 筆資料至試算表 A:G 欄。`);
+        alert(`填報成功！已寫入 ${json.count} 筆資料至試算表。`);
         document.querySelectorAll(".student-cb").forEach(cb => cb.checked = false);
         document.getElementById("scoreInput").value = "";
         document.getElementById("noteInput").value = "";
