@@ -26,7 +26,7 @@
       padding: 24px 15px;
     }
     .card {
-      max-width: 920px;
+      max-width: 940px;
       margin: 0 auto;
       background: var(--card-bg);
       border-radius: 10px;
@@ -131,14 +131,23 @@
     .btn-danger { background: var(--danger); color: #fff; }
     .btn:disabled { background: #ccc; cursor: not-allowed; }
 
-    .limit-tag {
+    /* 名額狀態標籤 */
+    .quota-box {
       font-size: 13px;
-      font-weight: normal;
-      color: #0369a1;
+      padding: 8px 14px;
+      border-radius: 6px;
       background: #e0f2fe;
-      padding: 2px 8px;
-      border-radius: 4px;
-      margin-left: 8px;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 4px;
+    }
+    .quota-full {
+      background: #fee2e2;
+      color: #991b1b;
+      border-color: #fecaca;
     }
   </style>
 </head>
@@ -153,9 +162,8 @@
     </div>
   </div>
 
-  <!-- 1. Google 登入按鈕 -->
   <div id="loginView" class="login-box">
-    <p>本系統僅供學校教職員登入填報，請使用學校 Google 帳號登入：</p>
+    <p>請使用學校 Google 帳號登入系統：</p>
     <div style="display: flex; justify-content: center;">
       <div id="g_id_onload"
            data-client_id="341910377782-3unva3oggi84vp88uga23horpumjaptt.apps.googleusercontent.com"
@@ -173,21 +181,19 @@
     </div>
   </div>
 
-  <!-- 2. 身分狀態容器 -->
   <div id="statusContainer" class="hidden">
     <div id="studentBlockedCard" class="notice-card card-danger hidden">
-      <h3 style="margin-top:0;">🚫 存取受限：偵測到學生身分帳號</h3>
+      <h3 style="margin-top:0;">🚫 存取受限：偵測到學生帳號</h3>
       <p>本系統僅供學校教職員登入，學生帳號無權存取。</p>
       <button class="btn btn-danger" onclick="logout()">切換帳號</button>
     </div>
 
     <div id="pendingCard" class="notice-card card-pending hidden">
       <h3 style="margin-top:0;">⌛ 權限審核中</h3>
-      <p>您的教職員使用申請已送出，目前正等待管理者核准中。</p>
-      <p style="font-size:13px; color:#475569;">管理者於「申請帳號資料」表核准並產生通行碼後即可填報。</p>
+      <p>您的填報申請已送出，正等待管理者於信箱點選核准。</p>
+      <p style="font-size:13px; color:#475569;">核准開通後，重新整理本頁即可直接填報。</p>
     </div>
 
-    <!-- 首次使用：需選擇自己專屬的班級 -->
     <div id="applyCard" class="notice-card card-apply hidden">
       <h3 style="margin-top:0; color:#b45309;">📋 教職員帳號班級綁定申請</h3>
       <p style="font-size:14px; color:#666; margin-bottom:14px;">帳號 (<strong><span id="applyEmailSpan"></span></strong>) 尚未取得授權：</p>
@@ -198,7 +204,7 @@
       </div>
 
       <div class="form-group">
-        <label for="applyTargetClass">請選擇您任教/欲綁定的班級 (每位老師限綁定一班)：</label>
+        <label for="applyTargetClass">請選擇任教班級 (每位老師限綁定一班)：</label>
         <select id="applyTargetClass">
           <option value="">-- 請選擇班級 --</option>
           <option value="101">101 班</option><option value="102">102 班</option><option value="103">103 班</option><option value="104">104 班</option>
@@ -211,30 +217,28 @@
       </div>
 
       <div class="form-group">
-        <label for="applyInviteCode">教職員申請代碼 (防學生誤填)：</label>
-        <input type="password" id="applyInviteCode" placeholder="請輸入通行代碼 (預設 DHIPS-TEACHER)" />
+        <label for="applyInviteCode">教職員申請代碼：</label>
+        <input type="password" id="applyInviteCode" placeholder="請輸入通行代碼 (DHIPS-TEACHER)" />
       </div>
 
       <div class="form-group">
         <label for="applyReason">身分備註 (選填)：</label>
-        <input type="text" id="applyReason" placeholder="例如：該班導師" />
+        <input type="text" id="applyReason" placeholder="例如：導師" />
       </div>
 
       <button class="btn btn-warning" id="applySubmitBtn" style="width:100%;" onclick="sendTeacherApplication()">送出綁定申請</button>
     </div>
   </div>
 
-  <!-- 3. 已授權主填報區 -->
   <div id="mainSystem" class="hidden">
     <div class="auth-badge">
       <span>✔ 授權已核准</span>
-      <span style="color:#666;">| 專屬填報班級:</span>
+      <span style="color:#666;">| 專屬班級:</span>
       <strong id="assignedClassBadge" style="color:#1e40af; font-size:14px;"></strong>
       <span style="color:#666;">| 通行碼:</span>
       <code id="userUuidSpan" style="font-weight:bold;"></code>
     </div>
 
-    <!-- 步驟一與二：選擇班級與填報項目 -->
     <div class="grid-2">
       <div class="form-group">
         <label for="classSelect">填報班級 (已綁定鎖定)</label>
@@ -244,21 +248,23 @@
       </div>
 
       <div class="form-group">
-        <label for="itemSelect">
-          填報項目
-          <span id="itemLimitTag" class="limit-tag hidden"></span>
-        </label>
+        <label for="itemSelect">填報項目 (自「設定」表抓取)</label>
         <select id="itemSelect" onchange="onItemSelected()" disabled>
           <option value="">-- 請先確認班級 --</option>
         </select>
       </div>
     </div>
 
-    <!-- 步驟三：個別指派學生與成績表現表 -->
+    <!-- 即時名額狀況提示列 -->
+    <div id="quotaBox" class="quota-box hidden">
+      <span id="quotaText"></span>
+      <strong id="remainingBadge"></strong>
+    </div>
+
     <div id="recordSection" class="hidden" style="margin-top: 15px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
         <label style="font-size:15px;">指派獲獎學生與個別成績表現 (排名)</label>
-        <button type="button" class="btn btn-outline" onclick="addStudentRow()">+ 新增一位獲獎學生</button>
+        <button type="button" class="btn btn-outline" id="addRowBtn" onclick="addStudentRow()">+ 新增一位獲獎學生</button>
       </div>
 
       <table class="record-table">
@@ -266,7 +272,7 @@
           <tr>
             <th style="width: 5%;">#</th>
             <th style="width: 38%;">學生姓名 (學號)</th>
-            <th style="width: 25%;">成績表現 (排名下拉選單)</th>
+            <th style="width: 25%;">成績表現 (排名 1~上限)</th>
             <th style="width: 24%;">備註 (選填)</th>
             <th style="width: 8%; text-align:center;">刪除</th>
           </tr>
@@ -282,10 +288,13 @@
 </div>
 
 <script>
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyfiNLmE_kg8Lc4v0OLimkdQ5gmu54ym3CXDnuUY4jtH9EgkxJt7Z54-STlhcF7YxIUDQ/exec"; // 請填入獨立後端部署網址
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyfiNLmE_kg8Lc4v0OLimkdQ5gmu54ym3CXDnuUY4jtH9EgkxJt7Z54-STlhcF7YxIUDQ/exec";
 
   let currentUser = { email: "", name: "" };
-  let currentClassData = null;
+  let currentClassData = null; // 包含 students (自學號查詢), items, scoreOptions, historyStats
+  let currentItemLimit = 0;
+  let currentRemaining = 0;
+  let currentAwardedIds = [];
 
   function handleCredentialResponse(response) {
     const payload = decodeJwtResponse(response.credential);
@@ -331,7 +340,6 @@
         document.getElementById("mainSystem").classList.remove("hidden");
         document.getElementById("userUuidSpan").textContent = auth.uuid;
         document.getElementById("assignedClassBadge").textContent = auth.role === "ADMIN" ? "全校班級 (管理者)" : `${auth.assignedClass} 班`;
-        
         loadAssignedClasses(auth);
       } else {
         statusContainer.classList.remove("hidden");
@@ -356,7 +364,7 @@
     const btn = document.getElementById("applySubmitBtn");
 
     if (!teacherName) return alert("請輸入教師姓名！");
-    if (!targetClass) return alert("請選擇您要綁定的班級！");
+    if (!targetClass) return alert("請選擇班級！");
     if (!inviteCode) return alert("請輸入教職員代碼！");
 
     btn.disabled = true;
@@ -390,7 +398,6 @@
     }
   }
 
-  // 載入班級選單：一般老師直接鎖定專屬班級
   async function loadAssignedClasses(auth) {
     try {
       const res = await fetch(`${GAS_WEB_APP_URL}?action=getClasses&email=${encodeURIComponent(currentUser.email)}`);
@@ -398,7 +405,6 @@
       if (json.status === "success") {
         const sel = document.getElementById("classSelect");
         sel.innerHTML = "";
-
         json.data.forEach(cls => {
           const opt = document.createElement("option");
           opt.value = cls;
@@ -406,13 +412,11 @@
           sel.appendChild(opt);
         });
 
-        // 如果是一般老師，自動選擇該班並鎖定下拉選單，防止切換
         if (json.role === "TEACHER") {
           sel.value = auth.assignedClass;
-          sel.disabled = true; // 鎖定不可改
-          onClassSelected();   // 自動載入該班資料
+          sel.disabled = true;
+          onClassSelected();
         } else {
-          // 管理者保留切換功能
           sel.disabled = false;
           onClassSelected();
         }
@@ -426,11 +430,12 @@
     const classId = document.getElementById("classSelect").value;
     const itemSelect = document.getElementById("itemSelect");
     const recordSection = document.getElementById("recordSection");
-    
+    const quotaBox = document.getElementById("quotaBox");
+
     itemSelect.disabled = true;
     itemSelect.innerHTML = '<option value="">-- 載入資料中... --</option>';
     recordSection.classList.add("hidden");
-    document.getElementById("itemLimitTag").classList.add("hidden");
+    quotaBox.classList.add("hidden");
 
     if (!classId) return;
 
@@ -461,48 +466,83 @@
     }
   }
 
+  // ⭐ 選擇項目時：計算歷史累積、剩餘名額與鎖定已獲獎學生
   function onItemSelected() {
     const itemSelect = document.getElementById("itemSelect");
-    const selectedOpt = itemSelect.options[itemSelect.selectedIndex];
+    const itemName = itemSelect.value;
     const recordSection = document.getElementById("recordSection");
-    const limitTag = document.getElementById("itemLimitTag");
+    const quotaBox = document.getElementById("quotaBox");
+    const quotaText = document.getElementById("quotaText");
+    const remainingBadge = document.getElementById("remainingBadge");
+    const addRowBtn = document.getElementById("addRowBtn");
 
-    if (!itemSelect.value) {
+    if (!itemName) {
       recordSection.classList.add("hidden");
-      limitTag.classList.add("hidden");
+      quotaBox.classList.add("hidden");
       return;
     }
 
-    const limit = selectedOpt.dataset.limit;
-    limitTag.textContent = `本項目上限：最多 ${limit} 位學生`;
-    limitTag.classList.remove("hidden");
+    const selectedOpt = itemSelect.options[itemSelect.selectedIndex];
+    currentItemLimit = Number(selectedOpt.dataset.limit) || 5;
 
+    // 取得歷史填報統計
+    const stat = currentClassData.historyStats[itemName] || { usedCount: 0, awardedIds: [] };
+    const usedCount = stat.usedCount;
+    currentAwardedIds = stat.awardedIds;
+    currentRemaining = currentItemLimit - usedCount;
+
+    quotaBox.classList.remove("hidden");
+    if (currentRemaining <= 0) {
+      quotaBox.className = "quota-box quota-full";
+      quotaText.textContent = `【${itemName}】上限 ${currentItemLimit} 人 | 歷史已填報 ${usedCount} 人`;
+      remainingBadge.textContent = "已額滿，無法再填報！";
+      recordSection.classList.add("hidden");
+      alert(`⚠【${itemName}】名額已全部額滿 (${usedCount}/${currentItemLimit})！`);
+      return;
+    } else {
+      quotaBox.className = "quota-box";
+      quotaText.textContent = `【${itemName}】上限 ${currentItemLimit} 人 | 歷史已填報 ${usedCount} 人`;
+      remainingBadge.textContent = `尚餘名額：${currentRemaining} 人 (成績排名限 1~${currentItemLimit})`;
+    }
+
+    // 重設表格並建立第一列
     document.getElementById("recordTbody").innerHTML = "";
     addStudentRow();
     recordSection.classList.remove("hidden");
   }
 
+  // ⭐ 新增一列：嚴格過濾已得過獎的學生、排名限縮在 1~上限
   function addStudentRow() {
     const tbody = document.getElementById("recordTbody");
     const rowIndex = tbody.rows.length + 1;
-    const itemSelect = document.getElementById("itemSelect");
-    const maxLimit = Number(itemSelect.options[itemSelect.selectedIndex].dataset.limit) || 99;
 
-    if (tbody.rows.length >= maxLimit) {
-      alert(`已達到本項目名額上限 (${maxLimit} 人)，無法再新增！`);
+    // 檢查是否超出剩餘名額
+    if (tbody.rows.length >= currentRemaining) {
+      alert(`已達本次尚可填報的名額上限 (${currentRemaining} 人)，無法再新增！`);
       return;
     }
 
     const tr = document.createElement("tr");
 
+    // 1. 建立學生下拉選單 (自「學號查詢」名單)
     let studentOptionsHtml = '<option value="">-- 請選擇學生 --</option>';
     currentClassData.students.forEach(st => {
-      studentOptionsHtml += `<option value="${st.id}" data-name="${st.name}">${st.id} ${st.name}</option>`;
+      const isAwarded = currentAwardedIds.includes(st.id);
+      if (isAwarded) {
+        studentOptionsHtml += `<option value="${st.id}" data-name="${st.name}" disabled style="color:#94a3b8;">${st.id} ${st.name} (已獲此獎)</option>`;
+      } else {
+        studentOptionsHtml += `<option value="${st.id}" data-name="${st.name}">${st.id} ${st.name}</option>`;
+      }
     });
 
-    let scoreOptionsHtml = '<option value="">-- 選擇成績表現 --</option>';
+    // 2. 建立成績表現下拉選單 (嚴格限制在 1 ~ currentItemLimit，絕不超過上限)
+    let scoreOptionsHtml = '<option value="">-- 選擇成績表現 (排名) --</option>';
     currentClassData.scoreOptions.forEach(sc => {
-      scoreOptionsHtml += `<option value="${sc}">${sc}</option>`;
+      const scoreNum = Number(sc);
+      // 只能出現 <= currentItemLimit 的選項 (例如上限 5 人，只會出現 1~5)
+      if (!isNaN(scoreNum) && scoreNum <= currentItemLimit) {
+        scoreOptionsHtml += `<option value="${sc}">${sc}</option>`;
+      }
     });
 
     tr.innerHTML = `
@@ -530,6 +570,7 @@
     });
   }
 
+  // ⭐ 提交檢查：嚴格防重複選取、防跨次超額
   async function submitAllRecords() {
     const classId = document.getElementById("classSelect").value;
     const itemName = document.getElementById("itemSelect").value;
@@ -538,8 +579,12 @@
     if (!classId || !itemName) return alert("請確認班級與填報項目已選取！");
     if (rows.length === 0) return alert("請至少新增一位獲獎學生！");
 
+    if (rows.length > currentRemaining) {
+      return alert(`本次填報人數 (${rows.length} 人) 超過尚有名額 (${currentRemaining} 人)！`);
+    }
+
     const records = [];
-    const studentIdSet = new Set();
+    const currentBatchStudentIds = new Set();
 
     for (let i = 0; i < rows.length; i++) {
       const studentSel = rows[i].querySelector(".row-student");
@@ -561,11 +606,19 @@
         scoreSel.focus();
         return;
       }
-      if (studentIdSet.has(studentId)) {
-        alert(`學生【${studentName}】在清單中被重複選取！`);
+
+      // 防同一批次重複選取同一位學生
+      if (currentBatchStudentIds.has(studentId)) {
+        alert(`學生【${studentName} (${studentId})】在清單中被重複選取！請移除重複項目。`);
         return;
       }
-      studentIdSet.add(studentId);
+      currentBatchStudentIds.add(studentId);
+
+      // 防歷史重複獲獎
+      if (currentAwardedIds.includes(studentId)) {
+        alert(`學生【${studentName}】歷史先前已獲獎，不可重複提報！`);
+        return;
+      }
 
       records.push({ id: studentId, name: studentName, score: score, note: note });
     }
@@ -591,9 +644,8 @@
 
       if (json.status === "success") {
         alert(`填報成功！已寫入 ${json.count} 位學生成績至 ${classId} 班試算表。`);
-        document.getElementById("itemSelect").value = "";
-        document.getElementById("recordSection").classList.add("hidden");
-        document.getElementById("itemLimitTag").classList.add("hidden");
+        // 重新載入該班最新統計
+        onClassSelected();
       } else {
         alert(`寫入失敗：${json.message}`);
       }
