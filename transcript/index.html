@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>班級成績與表現填報系統</title>
-  <!-- Google Identity Services (GIS) 登入函式庫 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     :root {
@@ -83,6 +82,7 @@
     select:focus, input:focus { border-color: var(--primary); }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
+    /* 表格樣式 */
     .record-table {
       width: 100%;
       border-collapse: collapse;
@@ -134,6 +134,7 @@
     .btn-danger { background: var(--danger); color: #fff; }
     .btn:disabled { background: #ccc; cursor: not-allowed; }
 
+    /* 名額狀態標籤 */
     .quota-box {
       font-size: 13px;
       padding: 9px 14px;
@@ -151,6 +152,24 @@
       color: #991b1b;
       border-color: #fecaca;
     }
+
+    /* 歷史紀錄查詢區塊樣式 */
+    .history-card {
+      margin-top: 36px;
+      border-top: 2px dashed #e2e8f0;
+      padding-top: 20px;
+    }
+    .history-title {
+      font-size: 15px;
+      font-weight: bold;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .history-table th { background-color: #f1f5f9; }
+    .history-table td { background-color: #ffffff; }
   </style>
 </head>
 <body>
@@ -164,11 +183,10 @@
     </div>
   </div>
 
-  <!-- 1. 未登入：Google 登入按鈕 -->
+  <!-- 1. Google 登入按鈕 -->
   <div id="loginView" class="login-box">
-    <p>本系統僅供學校教職員登入填報，請使用學校 Google 帳號登入：</p>
+    <p>請使用學校 Google 帳號登入系統：</p>
     <div style="display: flex; justify-content: center;">
-      <!-- ⭐ 請置換為您的 Google OAuth 用戶端 ID -->
       <div id="g_id_onload"
            data-client_id="341910377782-3unva3oggi84vp88uga23horpumjaptt.apps.googleusercontent.com"
            data-callback="handleCredentialResponse"
@@ -185,23 +203,20 @@
     </div>
   </div>
 
-  <!-- 2. 身分查驗狀態區 -->
+  <!-- 2. 身分狀態展示 -->
   <div id="statusContainer" class="hidden">
-    <!-- 學生帳號自動攔截 -->
     <div id="studentBlockedCard" class="notice-card card-danger hidden">
-      <h3 style="margin-top:0;">🚫 存取受限：偵測到學生身分帳號</h3>
+      <h3 style="margin-top:0;">🚫 存取受限：偵測到學生帳號</h3>
       <p>本系統僅供學校教職員登入，學生帳號無權存取。</p>
-      <button class="btn btn-danger" onclick="logout()">切換其他帳號</button>
+      <button class="btn btn-danger" onclick="logout()">切換帳號</button>
     </div>
 
-    <!-- 待審核中提示 -->
     <div id="pendingCard" class="notice-card card-pending hidden">
       <h3 style="margin-top:0;">⌛ 權限審核中</h3>
-      <p>您的填報申請已送出，目前正等待管理者審核開通。</p>
-      <p style="font-size:13px; color:#475569;">管理者點擊核准並產生專屬通行碼後，重新整理本頁即可直接填報。</p>
+      <p>您的填報申請已送出，正等待管理者於信箱點選核准。</p>
+      <p style="font-size:13px; color:#475569;">核准開通後，重新整理本頁即可直接填報。</p>
     </div>
 
-    <!-- 未審核：教師申請表單 -->
     <div id="applyCard" class="notice-card card-apply hidden">
       <h3 style="margin-top:0; color:#b45309;">📋 教職員帳號班級綁定申請</h3>
       <p style="font-size:14px; color:#666; margin-bottom:14px;">帳號 (<strong><span id="applyEmailSpan"></span></strong>) 尚未取得授權：</p>
@@ -219,8 +234,8 @@
       </div>
 
       <div class="form-group">
-        <label for="applyInviteCode">校內教職員申請代碼：</label>
-        <input type="password" id="applyInviteCode" placeholder="請輸入通行代碼 (預設 DHIPS-TEACHER)" />
+        <label for="applyInviteCode">教職員申請代碼：</label>
+        <input type="password" id="applyInviteCode" placeholder="請輸入通行代碼 (DHIPS-TEACHER)" />
       </div>
 
       <div class="form-group">
@@ -232,7 +247,7 @@
     </div>
   </div>
 
-  <!-- 3. 已核准主填報區 (未通過前完全隔離) -->
+  <!-- 3. 已核准填報作業區 -->
   <div id="mainSystem" class="hidden">
     <div class="auth-badge">
       <span>✔ 授權已核准</span>
@@ -251,20 +266,20 @@
       </div>
 
       <div class="form-group">
-        <label for="itemSelect">填報項目 (自「設定」工作表動態讀取)</label>
+        <label for="itemSelect">填報項目 (自「設定」表抓取)</label>
         <select id="itemSelect" onchange="onItemSelected()" disabled>
           <option value="">-- 請先確認班級 --</option>
         </select>
       </div>
     </div>
 
-    <!-- 即時歷史名額與剩餘名額提示 -->
+    <!-- 即時名額狀況提示列 -->
     <div id="quotaBox" class="quota-box hidden">
       <span id="quotaText"></span>
       <strong id="remainingBadge"></strong>
     </div>
 
-    <!-- 個別指派學生與成績表現名單 -->
+    <!-- 新增填報表單區塊 (額滿時會暫時隱藏，只顯示下方歷史紀錄) -->
     <div id="recordSection" class="hidden" style="margin-top: 15px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
         <label style="font-size:15px;">指派獲獎學生與個別成績表現 (排名)</label>
@@ -288,20 +303,44 @@
         <button class="btn btn-primary" id="submitBtn" style="padding:11px 24px; font-size:15px;" onclick="submitAllRecords()">確認送出並寫入試算表</button>
       </div>
     </div>
+
+    <!-- ⭐ 核心新增：該項目已填報歷史紀錄查詢確認區塊 -->
+    <div id="historySection" class="history-card hidden">
+      <div class="history-title">
+        <span>📋【<span id="historyItemTitle"></span>】目前已寫入試算表之名單確認 (<span id="historyTotalCount">0</span> 人)</span>
+      </div>
+      
+      <table class="record-table history-table">
+        <thead>
+          <tr>
+            <th style="width: 5%;">#</th>
+            <th style="width: 24%;">填報時間</th>
+            <th style="width: 16%;">學號</th>
+            <th style="width: 18%;">學生姓名</th>
+            <th style="width: 15%;">成績表現</th>
+            <th style="width: 22%;">填報人帳號</th>
+          </tr>
+        </thead>
+        <tbody id="historyTbody"></tbody>
+      </table>
+      <div id="noHistoryMsg" class="hidden" style="color: #64748b; padding: 16px; text-align: center; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; margin-top: 10px;">
+        目前尚無此項目的填報紀錄。
+      </div>
+    </div>
+
   </div>
 </div>
 
 <script>
-  // ⭐ 請置換為您的獨立 Apps Script Web App 部署網址
+  // ⭐ 請填入獨立後端部署網址
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyfiNLmE_kg8Lc4v0OLimkdQ5gmu54ym3CXDnuUY4jtH9EgkxJt7Z54-STlhcF7YxIUDQ/exec";
 
   let currentUser = { email: "", name: "" };
-  let currentClassData = null; // 包含 students(自學號查詢), items, scoreOptions, historyStats
+  let currentClassData = null; 
   let currentItemLimit = 0;
   let currentRemaining = 0;
   let currentAwardedIds = [];
 
-  // 1. Google 登入處理
   function handleCredentialResponse(response) {
     const payload = decodeJwtResponse(response.credential);
     currentUser.email = payload.email.toLowerCase();
@@ -311,7 +350,6 @@
     document.getElementById("userInfo").classList.remove("hidden");
     document.getElementById("userEmailSpan").textContent = `${currentUser.name} (${currentUser.email})`;
 
-    // 前端防線：判斷是否符合學號特徵 (純數字或 s/stu 接數字開頭)
     if (/^([0-9]|s[0-9]|stu[0-9])/i.test(currentUser.email.split("@")[0])) {
       document.getElementById("statusContainer").classList.remove("hidden");
       document.getElementById("studentBlockedCard").classList.remove("hidden");
@@ -333,7 +371,6 @@
     location.reload();
   }
 
-  // 2. 身分全域查驗
   async function verifyGlobalAuth() {
     try {
       const res = await fetch(`${GAS_WEB_APP_URL}?action=checkGlobalAuth&email=${encodeURIComponent(currentUser.email)}`);
@@ -354,7 +391,6 @@
         if (auth.status === "PENDING") {
           document.getElementById("pendingCard").classList.remove("hidden");
         } else {
-          // 未申請過：顯示申請卡片，並動態抓取班級選單
           document.getElementById("applyEmailSpan").textContent = currentUser.email;
           document.getElementById("applyTeacherName").value = currentUser.name;
           loadApplicationClassOptions();
@@ -362,11 +398,10 @@
         }
       }
     } catch (e) {
-      alert("連線驗證失敗，請檢查網路連線或後端設定！");
+      alert("連線驗證失敗！");
     }
   }
 
-  // ⭐ 動態自後端「班級」工作表讀取全校班級選單 (供申請使用)
   async function loadApplicationClassOptions() {
     try {
       const res = await fetch(`${GAS_WEB_APP_URL}?action=getAllClassList`);
@@ -386,7 +421,6 @@
     }
   }
 
-  // 3. 送出綁定申請
   async function sendTeacherApplication() {
     const teacherName = document.getElementById("applyTeacherName").value.trim();
     const targetClass = document.getElementById("applyTargetClass").value;
@@ -395,8 +429,8 @@
     const btn = document.getElementById("applySubmitBtn");
 
     if (!teacherName) return alert("請輸入教師姓名！");
-    if (!targetClass) return alert("請選擇您要綁定的班級！");
-    if (!inviteCode) return alert("請輸入校內教職員申請代碼！");
+    if (!targetClass) return alert("請選擇班級！");
+    if (!inviteCode) return alert("請輸入教職員代碼！");
 
     btn.disabled = true;
     btn.textContent = "傳送申請中...";
@@ -429,7 +463,6 @@
     }
   }
 
-  // 4. 載入班級並鎖定 (一般老師自動選定專屬班級)
   async function loadAssignedClasses(auth) {
     try {
       const res = await fetch(`${GAS_WEB_APP_URL}?action=getClasses&email=${encodeURIComponent(currentUser.email)}`);
@@ -446,7 +479,7 @@
 
         if (json.role === "TEACHER") {
           sel.value = auth.assignedClass;
-          sel.disabled = true; // 鎖定不可改
+          sel.disabled = true;
           onClassSelected();
         } else {
           sel.disabled = false;
@@ -458,17 +491,20 @@
     }
   }
 
-  // 5. 選擇班級：載入設定表項目、成績表現與學生
-  async function onClassSelected() {
+  async function onClassSelected(keepSelectedItemId = null) {
     const classId = document.getElementById("classSelect").value;
     const itemSelect = document.getElementById("itemSelect");
     const recordSection = document.getElementById("recordSection");
     const quotaBox = document.getElementById("quotaBox");
+    const historySection = document.getElementById("historySection");
 
     itemSelect.disabled = true;
-    itemSelect.innerHTML = '<option value="">-- 載入資料中... --</option>';
-    recordSection.classList.add("hidden");
-    quotaBox.classList.add("hidden");
+    if (!keepSelectedItemId) {
+      itemSelect.innerHTML = '<option value="">-- 載入資料中... --</option>';
+      recordSection.classList.add("hidden");
+      quotaBox.classList.add("hidden");
+      historySection.classList.add("hidden");
+    }
 
     if (!classId) return;
 
@@ -494,12 +530,19 @@
       });
 
       itemSelect.disabled = false;
+
+      // 如果有指定還原原本選取的項目（送出後重新整理）
+      if (keepSelectedItemId) {
+        itemSelect.value = keepSelectedItemId;
+        onItemSelected();
+      }
+
     } catch (e) {
       alert("載入班級資料失敗！");
     }
   }
 
-  // ⭐ 選擇項目：計算歷史累積、剩餘名額並動態過濾
+  // ⭐ 選擇項目時：除了計算名額，同時刷新渲染下方的歷史已寫入清單
   function onItemSelected() {
     const itemSelect = document.getElementById("itemSelect");
     const itemName = itemSelect.value;
@@ -507,17 +550,19 @@
     const quotaBox = document.getElementById("quotaBox");
     const quotaText = document.getElementById("quotaText");
     const remainingBadge = document.getElementById("remainingBadge");
+    const historySection = document.getElementById("historySection");
 
     if (!itemName) {
       recordSection.classList.add("hidden");
       quotaBox.classList.add("hidden");
+      historySection.classList.add("hidden");
       return;
     }
 
     const selectedOpt = itemSelect.options[itemSelect.selectedIndex];
     currentItemLimit = Number(selectedOpt.dataset.limit) || 5;
 
-    // 取得歷史填報統計
+    // 取得歷史統計與名單
     const stat = currentClassData.historyStats[itemName] || { usedCount: 0, awardedIds: [] };
     const usedCount = stat.usedCount;
     currentAwardedIds = stat.awardedIds;
@@ -528,21 +573,57 @@
       quotaBox.className = "quota-box quota-full";
       quotaText.textContent = `【${itemName}】上限 ${currentItemLimit} 人 | 歷史已填報 ${usedCount} 人`;
       remainingBadge.textContent = "名額已額滿，無法再填報！";
-      recordSection.classList.add("hidden");
-      alert(`⚠【${itemName}】名額已全部額滿 (${usedCount}/${currentItemLimit})！`);
-      return;
+      recordSection.classList.add("hidden"); // 額滿隱藏填報框
     } else {
       quotaBox.className = "quota-box";
       quotaText.textContent = `【${itemName}】上限 ${currentItemLimit} 人 | 歷史已填報 ${usedCount} 人`;
       remainingBadge.textContent = `尚餘名額：${currentRemaining} 人 (成績排名限 1~${currentItemLimit})`;
+      
+      // 重設填寫表並開啟
+      document.getElementById("recordTbody").innerHTML = "";
+      addStudentRow();
+      recordSection.classList.remove("hidden");
     }
 
-    document.getElementById("recordTbody").innerHTML = "";
-    addStudentRow();
-    recordSection.classList.remove("hidden");
+    // ⭐ 渲染下方歷史紀錄表 (即使額滿也能看！)
+    renderHistoryTable(itemName);
   }
 
-  // ⭐ 新增一列：過濾已得獎學生、排名限制在 1 ~ currentItemLimit
+  // ⭐ 渲染歷史明細表
+  function renderHistoryTable(itemName) {
+    const historySection = document.getElementById("historySection");
+    const historyTitle = document.getElementById("historyItemTitle");
+    const historyCount = document.getElementById("historyTotalCount");
+    const tbody = document.getElementById("historyTbody");
+    const noMsg = document.getElementById("noHistoryMsg");
+
+    historyTitle.textContent = itemName;
+    tbody.innerHTML = "";
+
+    const details = (currentClassData.historyDetails && currentClassData.historyDetails[itemName]) || [];
+    historyCount.textContent = details.length;
+
+    if (details.length === 0) {
+      noMsg.classList.remove("hidden");
+    } else {
+      noMsg.classList.add("hidden");
+      details.forEach((row, idx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td style="text-align:center; color:#64748b; font-weight:bold;">${idx + 1}</td>
+          <td style="color:#475569;">${row.date}</td>
+          <td style="font-family:monospace; font-weight:bold;">${row.id}</td>
+          <td style="font-weight:600; color:#1e293b;">${row.name}</td>
+          <td><span style="background:#f1f5f9; padding:3px 8px; border-radius:4px; font-weight:bold; color:#1e40af;">${row.score}</span></td>
+          <td style="font-size:13px; color:#64748b;">${row.submitter}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    historySection.classList.remove("hidden");
+  }
+
   function addStudentRow() {
     const tbody = document.getElementById("recordTbody");
     const rowIndex = tbody.rows.length + 1;
@@ -554,7 +635,6 @@
 
     const tr = document.createElement("tr");
 
-    // 1. 學生下拉選單 (明確來自「學號查詢」工作表)
     let studentOptionsHtml = '<option value="">-- 請選擇學生 --</option>';
     currentClassData.students.forEach(st => {
       const isAwarded = currentAwardedIds.includes(st.id);
@@ -565,7 +645,6 @@
       }
     });
 
-    // 2. 成績表現選單 (縮限至 1 ~ currentItemLimit)
     let scoreOptionsHtml = '<option value="">-- 選擇成績表現 (排名) --</option>';
     currentClassData.scoreOptions.forEach(sc => {
       const scoreNum = Number(sc);
@@ -599,7 +678,7 @@
     });
   }
 
-  // ⭐ 提交整批名單並寫入試算表
+  // ⭐ 送出成績並自動連動刷新下方明細表
   async function submitAllRecords() {
     const classId = document.getElementById("classSelect").value;
     const itemName = document.getElementById("itemSelect").value;
@@ -637,7 +716,7 @@
       }
 
       if (currentBatchStudentIds.has(studentId)) {
-        alert(`學生【${studentName} (${studentId})】在清單中被重複選取！請移除重複項目。`);
+        alert(`學生【${studentName} (${studentId})】在清單中重複選取！請移除重複項。`);
         return;
       }
       currentBatchStudentIds.add(studentId);
@@ -671,8 +750,8 @@
 
       if (json.status === "success") {
         alert(`填報成功！已寫入 ${json.count} 位學生成績至 ${classId} 班試算表。`);
-        // 重新載入該班最新統計資料
-        onClassSelected();
+        // ⭐ 成功後重新整理該班資料，並自動停留在原本的項目，即時在下方展示剛寫入的最新名單！
+        onClassSelected(itemName);
       } else {
         alert(`寫入失敗：${json.message}`);
       }
