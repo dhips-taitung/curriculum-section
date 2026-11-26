@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>教師課堂與單科課表查詢系統</title>
+  <style>
+    :root {
+      --primary-color: #2b6cb0;
+      --secondary-color: #319795;
+      --bg-color: #f7fafc;
+      --card-bg: #ffffff;
+      --border-color: #e2e8f0;
+      --text-color: #2d3748;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      padding: 16px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      color: var(--primary-color);
+    }
+
+    /* 頁籤切換按鈕 */
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .tab-btn {
+      padding: 10px 20px;
+      font-size: 1rem;
+      font-weight: bold;
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: #718096;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      color: var(--primary-color);
+      border-bottom-color: var(--primary-color);
+    }
+
+    /* 查詢條件區塊 */
+    .filter-panel {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      background: #edf2f7;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      align-items: center;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 200px;
+    }
+
+    label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #4a5568;
+    }
+
+    select {
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 1rem;
+      background-color: #fff;
+      outline: none;
+    }
+
+    select:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(43, 108, 176, 0.2);
+    }
+
+    /* 課表表格展示 */
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    th, td {
+      border: 1px solid var(--border-color);
+      padding: 12px 8px;
+      min-width: 100px;
+      vertical-align: top;
+    }
+
+    th {
+      background-color: #edf2f7;
+      font-weight: 600;
+      color: #4a5568;
+    }
+
+    .lesson-box {
+      background-color: #ebf8ff;
+      border-left: 4px solid var(--primary-color);
+      padding: 6px;
+      border-radius: 4px;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+      line-height: 1.4;
+      white-space: pre-line;
+    }
+
+    /* 單科課表卡片排列 */
+    .single-subject-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .subject-row {
+      display: flex;
+      align-items: flex-start;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 10px;
+      background: #fafafa;
+    }
+
+    .subject-period {
+      font-weight: bold;
+      min-width: 80px;
+      color: var(--secondary-color);
+      padding-top: 4px;
+    }
+
+    .subject-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .badge {
+      background: #e6fffa;
+      border: 1px solid #b2f5ea;
+      color: #234e52;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+
+    /* 載入與提示 */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #718096;
+      font-size: 1.1rem;
+    }
+
+    .empty-msg {
+      text-align: center;
+      padding: 30px;
+      color: #a0aec0;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>校園課表查詢系統</h1>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('teacher')">教師課堂查詢</button>
+      <button class="tab-btn" onclick="switchTab('subject')">單科查詢</button>
+    </div>
+
+    <!-- 模式一：教師課堂查詢 (按單位分類) -->
+    <div id="teacherQuerySection">
+      <div class="filter-panel">
+        <div class="form-group">
+          <label for="unitSelect">1. 選擇單位分類</label>
+          <select id="unitSelect" onchange="onUnitChange()">
+            <option value="">-- 請先選擇單位 --</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="teacherSelect">2. 選擇教師姓名</label>
+          <select id="teacherSelect" onchange="renderTeacherSchedule()" disabled>
+            <option value="">-- 請選擇教師 --</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="weekDaySelect">3. 選擇週別 (可選全週)</label>
+          <select id="weekDaySelect" onchange="renderTeacherSchedule()">
+            <option value="全">全週 (一至五)</option>
+            <option value="一">星期一</option>
+            <option value="二">星期二</option>
+            <option value="三">星期三</option>
+            <option value="四">星期四</option>
+            <option value="五">星期五</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-container" id="teacherResultArea">
+        <div class="empty-msg">請選擇「單位」與「教師」以查詢每週課表</div>
+      </div>
+    </div>
+
+    <!-- 模式二：單科查詢 (保留原 GAS 運算邏輯) -->
+    <div id="subjectQuerySection" style="display: none;">
+      <div class="filter-panel">
+        <div class="form-group">
+          <label for="subjectSelect">查詢課程名稱</label>
+          <select id="subjectSelect" onchange="renderSubjectSchedule()">
+            <option value="">-- 請選擇課程 --</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="subjectWeekSelect">查詢週別</label>
+          <select id="subjectWeekSelect" onchange="renderSubjectSchedule()">
+            <option value="一">星期一</option>
+            <option value="二">星期二</option>
+            <option value="三">星期三</option>
+            <option value="四">星期四</option>
+            <option value="五">星期五</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="subjectResultArea">
+        <div class="empty-msg">請選擇課程與週別以展開單科分佈</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ⚠️ 請替換為你實際部署的 Apps Script Web App 網址 ⚠️
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxyFz5iNwZFqjLIstWB451b6NmHzXJKhOnh-dgFj0CGs9ZfftoK_eoUXw2Io4cUpxGvPQ/exec";
+
+    // 全域快取資料
+    let appData = {
+      courses: [],
+      teacherGroups: {},
+      teachers: [],
+      schedule: []
+    };
+
+    // 初始化載入資料
+    window.onload = function() {
+      fetchData();
+    };
+
+    async function fetchData() {
+      const teacherResultArea = document.getElementById('teacherResultArea');
+      teacherResultArea.innerHTML = '<div class="loading">資料同步中，請稍候...</div>';
+
+      try {
+        const res = await fetch(GAS_API_URL);
+        const data = await res.json();
+
+        if (data.status === "success") {
+          appData = data;
+          initDropdowns();
+          teacherResultArea.innerHTML = '<div class="empty-msg">請選擇「單位」與「教師」以查詢課表</div>';
+        } else {
+          teacherResultArea.innerHTML = `<div class="empty-msg" style="color:red;">載入失敗: ${data.message}</div>`;
+        }
+      } catch (err) {
+        teacherResultArea.innerHTML = `<div class="empty-msg" style="color:red;">網路請求錯誤，請確認 Apps Script 已設為「所有人可存取」。</div>`;
+      }
+    }
+
+    // 初始化下拉選項
+    function initDropdowns() {
+      // 1. 初始化單位選單
+      const unitSelect = document.getElementById("unitSelect");
+      unitSelect.innerHTML = '<option value="">-- 請先選擇單位 --</option>';
+      Object.keys(appData.teacherGroups).forEach(unit => {
+        const opt = document.createElement("option");
+        opt.value = unit;
+        opt.textContent = unit;
+        unitSelect.appendChild(opt);
+      });
+
+      // 2. 初始化單科查詢的科目選單
+      const subjectSelect = document.getElementById("subjectSelect");
+      subjectSelect.innerHTML = '<option value="">-- 請選擇課程 --</option>';
+      appData.courses.forEach(course => {
+        const opt = document.createElement("option");
+        opt.value = course;
+        opt.textContent = course;
+        subjectSelect.appendChild(opt);
+      });
+    }
+
+    // 單位切換時動態更新老師名單 (避免選單過長)
+    function onUnitChange() {
+      const unit = document.getElementById("unitSelect").value;
+      const teacherSelect = document.getElementById("teacherSelect");
+
+      if (!unit || !appData.teacherGroups[unit]) {
+        teacherSelect.innerHTML = '<option value="">-- 請選擇教師 --</option>';
+        teacherSelect.disabled = true;
+        renderTeacherSchedule();
+        return;
+      }
+
+      teacherSelect.disabled = false;
+      teacherSelect.innerHTML = '<option value="">-- 請選擇教師 --</option>';
+      appData.teacherGroups[unit].forEach(tName => {
+        const opt = document.createElement("option");
+        opt.value = tName;
+        opt.textContent = tName;
+        teacherSelect.appendChild(opt);
+      });
+
+      renderTeacherSchedule();
+    }
+
+    // 切換頁籤
+    function switchTab(mode) {
+      const tabs = document.querySelectorAll('.tab-btn');
+      tabs.forEach(btn => btn.classList.remove('active'));
+
+      const tSec = document.getElementById('teacherQuerySection');
+      const sSec = document.getElementById('subjectQuerySection');
+
+      if (mode === 'teacher') {
+        tabs[0].classList.add('active');
+        tSec.style.display = 'block';
+        sSec.style.display = 'none';
+      } else {
+        tabs[1].classList.add('active');
+        tSec.style.display = 'none';
+        sSec.style.display = 'block';
+        renderSubjectSchedule();
+      }
+    }
+
+    // 渲染教師課表 (每週課表網格)
+    function renderTeacherSchedule() {
+      const teacherName = document.getElementById("teacherSelect").value;
+      const selectedWeek = document.getElementById("weekDaySelect").value;
+      const resultArea = document.getElementById("teacherResultArea");
+
+      if (!teacherName) {
+        resultArea.innerHTML = '<div class="empty-msg">請選擇教師以查看課表</div>';
+        return;
+      }
+
+      // 找到該老師在總課表表頭的 column index
+      const colIndex = appData.teachers.indexOf(teacherName);
+      if (colIndex === -1) {
+        resultArea.innerHTML = `<div class="empty-msg">未在總課表欄位中找到「${teacherName}」老師的課堂資料。</div>`;
+        return;
+      }
+
+      // 依一至五與第 1~7 節建構課表矩陣
+      // 總課表前 5*7 = 35 列，對應週一第 1~7 節到週五第 1~7 節
+      const weekDays = ["一", "二", "三", "四", "五"];
+      const periods = [1, 2, 3, 4, 5, 6, 7];
+
+      // 建立週到節次的對應資料
+      const tableData = {}; // { "一": { 1: "課名", 2: "..." } }
+      weekDays.forEach(w => tableData[w] = {});
+
+      // 解析 scheduleRows
+      appData.schedule.forEach((row, idx) => {
+        const wIndex = Math.floor(idx / 7);
+        const pIndex = (idx % 7) + 1;
+        if (wIndex < weekDays.length) {
+          const wName = weekDays[wIndex];
+          const lesson = row.cells[colIndex] || "";
+          tableData[wName][pIndex] = lesson;
+        }
+      });
+
+      // 判斷要顯示全週或單日
+      const displayWeeks = selectedWeek === "全" ? weekDays : [selectedWeek];
+
+      let html = `<table><thead><tr><th>節次</th>`;
+      displayWeeks.forEach(w => {
+        html += `<th>星期${w}</th>`;
+      });
+      html += `</tr></thead><tbody>`;
+
+      periods.forEach(p => {
+        html += `<tr><td>第 ${p} 節</td>`;
+        displayWeeks.forEach(w => {
+          const lesson = tableData[w][p];
+          if (lesson) {
+            html += `<td><div class="lesson-box">${lesson}</div></td>`;
+          } else {
+            html += `<td>-</td>`;
+          }
+        });
+        html += `</tr>`;
+      });
+
+      html += `</tbody></table>`;
+      resultArea.innerHTML = html;
+    }
+
+    // 渲染單科查詢 (保留原 GS 邏輯：科任優先 + 去重)
+    function renderSubjectSchedule() {
+      const courseKeyword = document.getElementById("subjectSelect").value;
+      const weekKeyword = document.getElementById("subjectWeekSelect").value;
+      const resultArea = document.getElementById("subjectResultArea");
+
+      if (!courseKeyword || !weekKeyword) {
+        resultArea.innerHTML = '<div class="empty-msg">請選擇課程與週別以展開分佈</div>';
+        return;
+      }
+
+      // 原 GS 索引定義: 
+      // 班級老師: B~Y => Index 0~23
+      // 科任老師: Z~BE => Index 24~55
+      const homeroomStart = 0;
+      const homeroomEnd = 23;
+      const subjectStart = 24;
+      const subjectEnd = 55;
+
+      const results = []; // 每節課符合的結果清單
+
+      appData.schedule.forEach(row => {
+        if (row.week === weekKeyword) {
+          const cells = row.cells;
+          const homeroomMatches = [];
+          const subjectMatches = [];
+
+          // 班級老師區
+          for (let j = homeroomStart; j <= homeroomEnd && j < cells.length; j++) {
+            const cell = cells[j];
+            if (cell && cell.includes(courseKeyword)) {
+              homeroomMatches.push(`${appData.teachers[j]}：${cell}`);
+            }
+          }
+
+          // 科任老師區
+          for (let j = subjectStart; j <= subjectEnd && j < cells.length; j++) {
+            const cell = cells[j];
+            if (cell && cell.includes(courseKeyword)) {
+              subjectMatches.push(`${appData.teachers[j]}：${cell}`);
+            }
+          }
+
+          // 優先判斷與去重
+          let merged = [];
+          if (subjectMatches.length > 0) {
+            merged = [...subjectMatches];
+            homeroomMatches.forEach(item => {
+              const cellText = item.split("：")[1];
+              const exists = subjectMatches.some(s => s.includes(cellText));
+              if (!exists) merged.push(item);
+            });
+          } else {
+            merged = [...homeroomMatches];
+          }
+
+          results.push(merged);
+        }
+      });
+
+      if (results.length === 0 || results.every(r => r.length === 0)) {
+        resultArea.innerHTML = '<div class="empty-msg">查無符合條件的課堂！</div>';
+        return;
+      }
+
+      let html = '<div class="single-subject-list">';
+      results.forEach((periodMatches, idx) => {
+        html += `
+          <div class="subject-row">
+            <div class="subject-period">第 ${idx + 1} 節</div>
+            <div class="subject-badges">
+        `;
+        if (periodMatches.length > 0) {
+          periodMatches.forEach(info => {
+            html += `<span class="badge">${info}</span>`;
+          });
+        } else {
+          html += `<span style="color:#a0aec0; font-size:0.9rem;">無課堂</span>`;
+        }
+        html += `</div></div>`;
+      });
+      html += '</div>';
+
+      resultArea.innerHTML = html;
+    }
+  </script>
+</body>
+</html>
